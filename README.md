@@ -3,15 +3,9 @@
   <p>
     <strong>High-Performance GitHub Search & Observability Engine</strong>
   </p>
-  <p>
-    <a href="#-english">English</a> •
-    <a href="#-türkçe">Türkçe</a>
-  </p>
 </div>
 
 ---
-
-# 🇬🇧 English
 
 A high-performance GitHub repository search, instant filtering, and distributed tracing (observability) engine built with **Elasticsearch**, **Go**, **OpenTelemetry**, and **React/TypeScript**.
 
@@ -41,6 +35,8 @@ A high-performance GitHub repository search, instant filtering, and distributed 
 ## ⚙️ Getting Started
 
 ### 1. Start Infrastructure Services (Docker)
+
+Run the Jaeger and Elasticsearch containers:
 
 ```bash
 # Jaeger (Distributed Tracing UI)
