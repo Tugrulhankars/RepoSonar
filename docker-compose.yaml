@@ -1,0 +1,17 @@
+services:
+
+  frontend:
+    image: ${DOCKER_USERNAME}/github-search-frontend:${VERSION}
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  backend:
+    image: ${DOCKER_USERNAME}/github-search-backend:${VERSION}
+    build:
+      context: ./backend
+    ports:
+      - "8080:8080"
