@@ -7,7 +7,46 @@ on:
 
 jobs:
 
+  # =========================
+  # SECURITY
+  # =========================
+
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # SAST
+      - name: Semgrep
+        uses: semgrep/semgrep@v1
+        with:
+          args: --config auto
+
+      # Secret scanning
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Dependency + filesystem vulnerability scan
+      - name: Trivy Filesystem Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+
+  # =========================
+  # FRONTEND
+  # =========================
+
   frontend:
+    needs: security
+
     runs-on: ubuntu-latest
 
     steps:
@@ -28,7 +67,13 @@ jobs:
         run: npm run build
 
 
+  # =========================
+  # BACKEND
+  # =========================
+
   backend:
+    needs: security
+
     runs-on: ubuntu-latest
 
     steps:
@@ -44,6 +89,10 @@ jobs:
         working-directory: backend
         run: go build ./...
 
+
+  # =========================
+  # DOCKER
+  # =========================
 
   docker:
     needs:
@@ -70,6 +119,18 @@ jobs:
 
       - name: Build Docker Images
         run: docker compose build
+
+      # Container security
+      - name: Scan Docker Images
+        run: |
+          docker images
+
+      - name: Trivy Container Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/github-search-backend:${{ env.VERSION }}
+          severity: CRITICAL,HIGH
+          exit-code: 1
 
       - name: Push Docker Images
         run: docker compose push
