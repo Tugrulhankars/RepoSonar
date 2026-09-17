@@ -18,19 +18,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # SAST
-      - name: Semgrep
-        uses: semgrep/semgrep@v1
-        with:
-          args: --config auto
+      # -------------------------
+      # SAST - Semgrep
+      # -------------------------
 
-      # Secret scanning
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Run Semgrep
+        run: semgrep scan --config auto
+
+      # -------------------------
+      # Secret Scanning - Gitleaks
+      # -------------------------
+
       - name: Gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Dependency + filesystem vulnerability scan
+      # -------------------------
+      # Dependency / Filesystem Scan
+      # -------------------------
+
       - name: Trivy Filesystem Scan
         uses: aquasecurity/trivy-action@master
         with:
@@ -57,6 +72,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
         working-directory: frontend
@@ -83,7 +100,9 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: "1.23"
+          cache: true
+          cache-dependency-path: backend/go.sum
 
       - name: Build Backend
         working-directory: backend
@@ -105,10 +124,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # -------------------------
+      # Version
+      # -------------------------
+
       - name: Set Environment Variables
         run: |
           echo "VERSION=v${{ github.run_number }}" >> $GITHUB_ENV
-          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
+
+      # -------------------------
+      # Docker Login
+      # -------------------------
 
       - name: Login Docker Hub
         run: |
@@ -117,13 +143,23 @@ jobs:
             -u "${{ secrets.DOCKER_USERNAME }}" \
             --password-stdin
 
+      # -------------------------
+      # Docker Build
+      # -------------------------
+
       - name: Build Docker Images
         run: docker compose build
 
-      # Container security
-      - name: Scan Docker Images
-        run: |
-          docker images
+      # -------------------------
+      # Show Images
+      # -------------------------
+
+      - name: List Docker Images
+        run: docker images
+
+      # -------------------------
+      # Container Security
+      # -------------------------
 
       - name: Trivy Container Scan
         uses: aquasecurity/trivy-action@master
@@ -131,6 +167,10 @@ jobs:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/github-search-backend:${{ env.VERSION }}
           severity: CRITICAL,HIGH
           exit-code: 1
+
+      # -------------------------
+      # Push
+      # -------------------------
 
       - name: Push Docker Images
         run: docker compose push
